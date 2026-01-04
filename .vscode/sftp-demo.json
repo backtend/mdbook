@@ -1,0 +1,27 @@
+{
+    "name": "SERVER_NAME",
+    "host": "123.123.123.123",
+    "protocol": "sftp",
+    "port": 22,
+    "username": "sftps",
+    "password": "替换我为密码并将该内容复制为新文件sftp.json不受版本控制",
+    "remotePath": "REMOTE_PATH",
+    "uploadOnSave": true,
+    "useTempFile": false,
+    "openSsh": false,
+    "watcher": {
+        "files": "**/*",
+        "autoUpload": true,
+        "autoDelete": true
+    },
+    "ignore": [
+        ".vscode",
+        ".git",
+        "**/.git/**",
+        ".DS_Store",
+        "vendor",
+        "GTAGS",
+        "GRTAGS",
+        "GPATH"
+    ]
+}

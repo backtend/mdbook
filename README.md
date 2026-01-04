@@ -4,8 +4,8 @@
 
 
 
-创建虚拟环境：python3 -m venv .env
+创建虚拟环境：python3 -m venv .venv
 
-pip install markdown tkinter
+pip3 install markdown tkinter
 
 pip install -r requirements.txt
