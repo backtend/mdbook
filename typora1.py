@@ -1,43 +1,41 @@
 import sys
 import re
 from PyQt6.QtWidgets import QApplication, QTextEdit, QMainWindow
-from PyQt6.QtGui import QTextCursor, QTextCharFormat, QFont, QColor, QTextBlockFormat, QKeyEvent
+from PyQt6.QtGui import (
+    QTextCursor,
+    QTextCharFormat,
+    QFont,
+    QColor,
+    QTextBlockFormat,
+)
 from PyQt6.QtCore import Qt
 
-# =======================
-# 配置常量
-# =======================
-class Config:
-    FONT_FAMILY = "Menlo"
-    FONT_SIZE = 14
-    MD_COLOR = QColor("#999999")       # Markdown 标签颜色
-    CODE_BG = QColor("#f2f2f2")
-    QUOTE_BG = QColor("#ffdddd")
-    INDENT_WIDTH = 40
 
-    SHOW_MD_TAGS_ONLY_ON_CURSOR_LINE = True  # 标签默认隐藏，光标所在行显示
-
-    HEADER_SIZES = {1: 28, 2: 24, 3: 20, 4: 18, 5: 16, 6: 14}  # H1~H6大小映射
+MD_COLOR = QColor("#999999")
+CODE_BG = QColor("#f2f2f2")
+QUOTE_BG = QColor("#ffdddd")
+INDENT_WIDTH = 40
 
 
 class MarkdownEditor(QTextEdit):
     def __init__(self):
         super().__init__()
-        self.setFont(QFont(Config.FONT_FAMILY, Config.FONT_SIZE))
+        self.setFont(QFont("Menlo", 14))
         self.setTabStopDistance(32)
-        self.document().setIndentWidth(Config.INDENT_WIDTH)
+        self.document().setIndentWidth(INDENT_WIDTH)
+
         self.textChanged.connect(self.apply_markdown_styles)
 
     # ===============================
-    # 核心 Markdown 样式应用（Undo 安全）
+    # Markdown Rendering (Undo Safe)
     # ===============================
     def apply_markdown_styles(self):
+        doc = self.document()
         cursor = self.textCursor()
         pos = cursor.position()
 
         self.blockSignals(True)
-        doc = self.document()
-        doc.setUndoRedoEnabled(False)  # 先关闭 Undo/Redo 防止污染
+        doc.setUndoRedoEnabled(False)
 
         self.clear_formatting()
 
@@ -48,7 +46,7 @@ class MarkdownEditor(QTextEdit):
         self.apply_lists(text)
         self.apply_inline(text)
 
-        doc.setUndoRedoEnabled(True)  # 再开启 Undo/Redo
+        doc.setUndoRedoEnabled(True)
         self.blockSignals(False)
 
         cursor.setPosition(pos)
@@ -59,7 +57,7 @@ class MarkdownEditor(QTextEdit):
         cursor.select(QTextCursor.SelectionType.Document)
 
         char_fmt = QTextCharFormat()
-        char_fmt.setFont(QFont(Config.FONT_FAMILY, Config.FONT_SIZE))
+        char_fmt.setFont(QFont("Menlo", 14))
         char_fmt.setForeground(QColor("black"))
         char_fmt.setBackground(Qt.GlobalColor.transparent)
 
@@ -75,51 +73,39 @@ class MarkdownEditor(QTextEdit):
     # ===============================
     def apply_code_blocks(self, text):
         for m in re.finditer(r"```(?:\w*\n)?(.*?)```", text, re.DOTALL):
-            start = m.start()
-            end = m.end()
             cursor = self.textCursor()
-            cursor.setPosition(start)
-            cursor.setPosition(end, QTextCursor.MoveMode.KeepAnchor)
+            cursor.setPosition(m.start())
+            cursor.setPosition(m.end(), QTextCursor.MoveMode.KeepAnchor)
 
             fmt = QTextCharFormat()
-            fmt.setFont(QFont(Config.FONT_FAMILY, Config.FONT_SIZE))
-            fmt.setBackground(Config.CODE_BG)
+            fmt.setFont(QFont("Menlo", 13))
+            fmt.setBackground(CODE_BG)
             cursor.mergeCharFormat(fmt)
 
-            self.weak_token(start, 3)
-            self.weak_token(end - 3, 3)
+            self.weak_token(m.start(), 3)
+            self.weak_token(m.end() - 3, 3)
 
     def apply_headings(self, text):
-        cursor_block = self.textCursor().block() if Config.SHOW_MD_TAGS_ONLY_ON_CURSOR_LINE else None
         for m in re.finditer(r"^(#{1,6})\s+", text, re.MULTILINE):
             level = len(m.group(1))
-            # 隐藏 Markdown # 标签
-            show_tags = True
-            if Config.SHOW_MD_TAGS_ONLY_ON_CURSOR_LINE and cursor_block:
-                block_num = self.document().findBlock(m.start()).blockNumber()
-                show_tags = (cursor_block.blockNumber() == block_num)
-            self.weak_token(m.start(1), level, show_tags=show_tags)
+            self.weak_token(m.start(1), level)
 
-            size = Config.HEADER_SIZES.get(level, Config.FONT_SIZE)
+            size = {1: 28, 2: 24, 3: 20, 4: 18, 5: 16, 6: 14}[level]
             self.format_range(m.end(), None, size=size, bold=True)
 
     def apply_blockquotes(self):
-        cursor_block = self.textCursor().block() if Config.SHOW_MD_TAGS_ONLY_ON_CURSOR_LINE else None
         block = self.document().firstBlock()
         while block.isValid():
             text = block.text()
-            show_tags = True
-            if Config.SHOW_MD_TAGS_ONLY_ON_CURSOR_LINE and cursor_block:
-                show_tags = (cursor_block == block)
-
             if text.startswith(">"):
                 cursor = QTextCursor(block)
+
                 fmt = QTextBlockFormat()
                 fmt.setLeftMargin(20)
-                fmt.setBackground(Config.QUOTE_BG)
+                fmt.setBackground(QUOTE_BG)
                 cursor.mergeBlockFormat(fmt)
 
-                self.weak_token(block.position(), 1, show_tags=show_tags)
+                self.weak_token(block.position(), 1)
 
                 char_fmt = QTextCharFormat()
                 char_fmt.setForeground(QColor("#555555"))
@@ -129,75 +115,49 @@ class MarkdownEditor(QTextEdit):
             block = block.next()
 
     def apply_lists(self, text):
-        cursor_block = self.textCursor().block() if Config.SHOW_MD_TAGS_ONLY_ON_CURSOR_LINE else None
         for line_num, line in enumerate(text.splitlines()):
             stripped = line.lstrip()
             if stripped.startswith(("- ", "* ", "+ ")) or re.match(r"\d+\.\s", stripped):
+                indent = (len(line) - len(stripped)) // 2
                 block = self.document().findBlockByLineNumber(line_num)
                 cursor = QTextCursor(block)
 
                 fmt = QTextBlockFormat()
-                indent = (len(line) - len(stripped)) // 2
                 fmt.setIndent(indent + 1)
                 cursor.mergeBlockFormat(fmt)
 
-                show_tags = True
-                if Config.SHOW_MD_TAGS_ONLY_ON_CURSOR_LINE and cursor_block:
-                    show_tags = (cursor_block == block)
-
                 marker_len = len(stripped.split()[0])
-                self.weak_token(block.position() + len(line) - len(stripped), marker_len, show_tags=show_tags)
+                self.weak_token(block.position() + len(line) - len(stripped), marker_len)
 
     # ===============================
     # Inline formatting
     # ===============================
     def apply_inline(self, text):
-        cursor_block = self.textCursor().block() if Config.SHOW_MD_TAGS_ONLY_ON_CURSOR_LINE else None
-
-        # **bold**
         for m in re.finditer(r"\*\*(.+?)\*\*", text):
-            show_tags = True
-            if Config.SHOW_MD_TAGS_ONLY_ON_CURSOR_LINE and cursor_block:
-                block = self.document().findBlock(m.start())
-                show_tags = (cursor_block == block)
-            self.weak_token(m.start(), 2, show_tags)
-            self.weak_token(m.end() - 2, 2, show_tags)
+            self.weak_token(m.start(), 2)
+            self.weak_token(m.end() - 2, 2)
             self.format_range(m.start(1), len(m.group(1)), bold=True)
 
-        # *italic*
         for m in re.finditer(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", text):
-            show_tags = True
-            if Config.SHOW_MD_TAGS_ONLY_ON_CURSOR_LINE and cursor_block:
-                block = self.document().findBlock(m.start())
-                show_tags = (cursor_block == block)
-            self.weak_token(m.start(), 1, show_tags)
-            self.weak_token(m.end() - 1, 1, show_tags)
+            self.weak_token(m.start(), 1)
+            self.weak_token(m.end() - 1, 1)
             self.format_range(m.start(1), len(m.group(1)), italic=True)
 
-        # `inline code`
         for m in re.finditer(r"`(.+?)`", text):
-            show_tags = True
-            if Config.SHOW_MD_TAGS_ONLY_ON_CURSOR_LINE and cursor_block:
-                block = self.document().findBlock(m.start())
-                show_tags = (cursor_block == block)
-            self.weak_token(m.start(), 1, show_tags)
-            self.weak_token(m.end() - 1, 1, show_tags)
-            self.format_range(m.start(1), len(m.group(1)), mono=True, bg=Config.CODE_BG)
+            self.weak_token(m.start(), 1)
+            self.weak_token(m.end() - 1, 1)
+            self.format_range(m.start(1), len(m.group(1)), mono=True, bg=CODE_BG)
 
     # ===============================
     # Helpers
     # ===============================
-    def weak_token(self, start, length, show_tags=True):
+    def weak_token(self, start, length):
         cursor = self.textCursor()
         cursor.setPosition(start)
         cursor.movePosition(QTextCursor.MoveOperation.Right, QTextCursor.MoveMode.KeepAnchor, length)
 
         fmt = QTextCharFormat()
-        if show_tags:
-            fmt.setForeground(Config.MD_COLOR)
-        else:
-            fmt.setForeground(self.palette().base().color())  # 隐藏标签
-
+        fmt.setForeground(MD_COLOR)
         cursor.mergeCharFormat(fmt)
 
     def format_range(self, start, length, size=None, bold=False, italic=False, mono=False, bg=None):
@@ -209,51 +169,49 @@ class MarkdownEditor(QTextEdit):
             cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock, QTextCursor.MoveMode.KeepAnchor)
 
         fmt = QTextCharFormat()
-        font = QFont(Config.FONT_FAMILY)
         if size:
-            font.setPointSize(size)
+            fmt.setFontPointSize(size)
         if bold:
-            font.setWeight(QFont.Weight.Bold)
+            fmt.setFontWeight(QFont.Weight.Bold)
         if italic:
-            font.setItalic(True)
+            fmt.setFontItalic(True)
         if mono:
-            font.setFamily(Config.FONT_FAMILY)
-        fmt.setFont(font)
+            fmt.setFont(QFont("Menlo"))
         if bg:
             fmt.setBackground(bg)
 
         cursor.mergeCharFormat(fmt)
 
     # ===============================
-    # Key behavior
+    # Keyboard behavior
     # ===============================
-    def keyPressEvent(self, event: QKeyEvent):
-        cursor = self.textCursor()
-        text = cursor.block().text().rstrip()
-
+    def keyPressEvent(self, event):
         # Shift+Enter → soft break
         if event.key() == Qt.Key.Key_Return and event.modifiers() & Qt.KeyboardModifier.ShiftModifier:
             super().keyPressEvent(event)
             return
 
-        # Enter → 自动列表续行
         if event.key() == Qt.Key.Key_Return:
-            prefix = None
-            if text.startswith(("- ", "* ", "+ ")):
-                prefix = text[:2]
-            else:
-                m = re.match(r"^(\d+)\.\s", text)
-                if m:
-                    prefix = f"{int(m.group(1)) + 1}. "
+            cursor = self.textCursor()
+            text = cursor.block().text().rstrip()
 
-            # 空列表退出
+            # Exit empty list
             if text in ("- ", "* ", "+ "):
                 cursor.select(QTextCursor.SelectionType.BlockUnderCursor)
                 cursor.removeSelectedText()
                 cursor.deleteChar()
                 return
 
+            prefix = None
+            if text.startswith(("- ", "* ", "+ ")):
+                prefix = text[:2]
+            else:
+                m = re.match(r"(\d+)\.\s", text)
+                if m:
+                    prefix = f"{int(m.group(1)) + 1}. "
+
             super().keyPressEvent(event)
+
             cursor = self.textCursor()
             if prefix:
                 cursor.insertText(prefix)
@@ -261,15 +219,7 @@ class MarkdownEditor(QTextEdit):
 
         super().keyPressEvent(event)
 
-    # 粘贴自动格式化
-    def insertFromMimeData(self, source):
-        super().insertFromMimeData(source)
-        self.apply_markdown_styles()
 
-
-# ===============================
-# 主窗口
-# ===============================
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
