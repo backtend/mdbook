@@ -94,6 +94,106 @@ class FileHelper:
         base_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "runtime"))
         return os.path.normpath(os.path.join(base_path, *subdirs))
 
+    @staticmethod
+    def read_file(file_path: str, encoding: str = 'utf-8') -> str:
+        """
+        读取文件内容
+        :param file_path: 文件路径
+        :param encoding: 文件编码，默认为 utf-8
+        :return: 文件内容
+        """
+        try:
+            with open(file_path, 'r', encoding=encoding) as f:
+                return f.read()
+        except Exception as e:
+            print(f"❌ 读取文件失败: {file_path}，错误: {e}")
+            return ''
+
+    @staticmethod
+    def write_file(file_path: str, content: str, encoding: str = 'utf-8') -> bool:
+        """
+        写入文件内容
+        :param file_path: 文件路径
+        :param content: 要写入的内容
+        :param encoding: 文件编码，默认为 utf-8
+        :return: True/False 表示是否写入成功
+        """
+        try:
+            # 确保目录存在
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            with open(file_path, 'w', encoding=encoding) as f:
+                f.write(content)
+            return True
+        except Exception as e:
+            print(f"❌ 写入文件失败: {file_path}，错误: {e}")
+            return False
+
+    @staticmethod
+    def append_file(file_path: str, content: str, encoding: str = 'utf-8') -> bool:
+        """
+        追加内容到文件
+        :param file_path: 文件路径
+        :param content: 要追加的内容
+        :param encoding: 文件编码，默认为 utf-8
+        :return: True/False 表示是否追加成功
+        """
+        try:
+            # 确保目录存在
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+            with open(file_path, 'a', encoding=encoding) as f:
+                f.write(content)
+            return True
+        except Exception as e:
+            print(f"❌ 追加文件失败: {file_path}，错误: {e}")
+            return False
+
+    @staticmethod
+    def get_file_list(directory: str, extension: str = None) -> list:
+        """
+        获取目录下的文件列表
+        :param directory: 目录路径
+        :param extension: 文件扩展名过滤，如 '.md'，默认为 None（不过滤）
+        :return: 文件路径列表
+        """
+        file_list = []
+        try:
+            for filename in os.listdir(directory):
+                file_path = os.path.join(directory, filename)
+                if os.path.isfile(file_path):
+                    if extension is None or filename.endswith(extension):
+                        file_list.append(file_path)
+            return file_list
+        except Exception as e:
+            print(f"❌ 获取文件列表失败: {directory}，错误: {e}")
+            return []
+
+    @staticmethod
+    def get_file_name(file_path: str) -> str:
+        """
+        获取文件名（包含扩展名）
+        :param file_path: 文件路径
+        :return: 文件名
+        """
+        return os.path.basename(file_path)
+
+    @staticmethod
+    def get_file_name_without_extension(file_path: str) -> str:
+        """
+        获取文件名（不包含扩展名）
+        :param file_path: 文件路径
+        :return: 文件名（不包含扩展名）
+        """
+        return os.path.splitext(os.path.basename(file_path))[0]
+
+    @staticmethod
+    def get_file_extension(file_path: str) -> str:
+        """
+        获取文件扩展名
+        :param file_path: 文件路径
+        :return: 文件扩展名（包含点号）
+        """
+        return os.path.splitext(file_path)[1]
+
 
 
 if __name__ == "__main__":
