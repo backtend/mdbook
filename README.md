@@ -1,13 +1,7 @@
-# mdbook
-一个全平台的markdown编辑器-在线笔记
+# Tauri + Vue + TypeScript
 
+This template should help get you started developing with Vue 3 and TypeScript in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.
 
-安装 Rust： 打开终端，运行官方安装脚本：
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-安装完成后，请重启终端或执行 source $HOME/.cargo/env。
+## Recommended IDE Setup
 
-然后使用pnpm:
-brew install node
-npm install -g pnpm
-
-pnpm create tauri-app
+- [VS Code](https://code.visualstudio.com/) + [Vue - Official](https://marketplace.visualstudio.com/items?itemName=Vue.volar) + [Tauri](https://marketplace.visualstudio.com/items?itemName=tauri-apps.tauri-vscode) + [rust-analyzer](https://marketplace.visualstudio.com/items?itemName=rust-lang.rust-analyzer)
